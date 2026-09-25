@@ -1,0 +1,6 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+python-multipart==0.0.12
+ortools>=9.10
+matplotlib>=3.8  # ใช้เฉพาะ cli.py (วาดรูปเส้นทาง)

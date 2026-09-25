@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+/* ── หน้ารอโหลด (components/LoadingScreen.jsx) ── */
+.ld-in {
+  animation: ld-fade-in 300ms ease both;
+}
+.ld-out {
+  animation: ld-fade-out 450ms ease forwards;
+  pointer-events: none;
+}
+.ld-indeterminate {
+  animation: ld-slide 1.2s ease-in-out infinite;
+}
+@keyframes ld-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes ld-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes ld-slide {
+  from {
+    left: -33%;
+  }
+  to {
+    left: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ld-in,
+  .ld-out {
+    animation-duration: 1ms;
+  }
+}
