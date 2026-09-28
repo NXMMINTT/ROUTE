@@ -1,3 +1,4 @@
+/** การ์ดตัวเลขสรุป: ชื่อ / ค่า / หมายเหตุใต้ค่า (ใช้ทุกหน้า) */
 export default function Stat({ label, value, note }) {
   return (
     <div className="flex flex-col justify-between gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3">

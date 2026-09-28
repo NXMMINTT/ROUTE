@@ -2,8 +2,8 @@
 คลัง instance ของหน้า Benchmark — เริ่มต้นว่าง มีเฉพาะไฟล์ที่ผู้ใช้เพิ่มเอง
 - instance: <DATA_DIR>/instances/*.vrp — เพิ่ม/แทนที่/ลบได้ทุกไฟล์
 - ค่า optimal ที่ผู้ใช้กรอกเอง (ทับค่า "Optimal value" ใน COMMENT หรือใช้กับไฟล์ที่ไม่มีค่า): <DATA_DIR>/optimal.json
-- ชุดตัวอย่าง CVRPLIB: backend/instances/*.vrp — ไม่แสดงในคลัง จนกว่าผู้ใช้กดเพิ่ม (add_samples คัดลอกเข้าคลัง)
-  DATA_DIR ค่าเริ่มต้นคือ backend/data
+- ชุดตัวอย่าง CVRPLIB: backend/samples/*.vrp — ไม่แสดงในคลัง จนกว่าผู้ใช้กดเพิ่ม (add_samples คัดลอกเข้าคลัง)
+  DATA_DIR / SAMPLES_DIR ตั้งใน core/config.py
 """
 
 import json
@@ -11,12 +11,9 @@ import os
 import re
 import threading
 
-from solver import parse_vrp
+from app.core.config import DATA_DIR, SAMPLES_DIR
+from app.services.solver import parse_vrp
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-SAMPLES_DIR = os.path.join(BASE_DIR, "instances")
-# ตั้ง ROUTE_DATA_DIR เพื่อเก็บไฟล์ที่ผู้ใช้อัปโหลดไว้ที่อื่น (เช่น volume ของ server ตอน deploy)
-DATA_DIR = os.environ.get("ROUTE_DATA_DIR") or os.path.join(BASE_DIR, "data")
 UPLOAD_DIR = os.path.join(DATA_DIR, "instances")
 OPTIMAL_FILE = os.path.join(DATA_DIR, "optimal.json")
 
@@ -47,6 +44,7 @@ def _path(folder: str, name: str) -> str:
 
 
 def _vrp_names(folder: str) -> list[str]:
+    """ชื่อ instance (ไม่รวม .vrp) ในโฟลเดอร์ เฉพาะชื่อที่ผ่าน NAME_RE"""
     if not os.path.isdir(folder):
         return []
     return sorted(f[:-4] for f in os.listdir(folder) if f.endswith(".vrp") and NAME_RE.fullmatch(f[:-4]))
@@ -67,6 +65,7 @@ def _read(path: str) -> str:
 
 
 def _overrides() -> dict:
+    """ค่า optimal ที่ผู้ใช้กรอกเอง {name: value} ไฟล์ไม่มี/เสีย = {}"""
     try:
         with open(OPTIMAL_FILE, encoding="utf-8") as f:
             return json.load(f)
@@ -93,6 +92,7 @@ def load(name: str) -> dict:
 
 
 def summary(name: str, data: dict) -> dict:
+    """ข้อมูลย่อของ instance สำหรับตารางหน้า Benchmark"""
     return {
         "name": name,
         "customers": len(data["coords"]) - 1,
@@ -129,12 +129,20 @@ def sample_names() -> list[str]:
     return _vrp_names(SAMPLES_DIR)
 
 
+def read_sample(name: str) -> str:
+    """เนื้อหาไฟล์ตัวอย่าง CVRPLIB ชื่อนี้ ไม่มีในชุดตัวอย่าง = StoreError 404"""
+    if name not in sample_names():
+        raise StoreError(f"ไม่พบไฟล์ตัวอย่าง {name}", 404)
+    return _read(_path(SAMPLES_DIR, name))
+
+
 def add_samples() -> list[tuple[str, bool]]:
     """คัดลอกชุดตัวอย่าง CVRPLIB เข้าคลัง (ชื่อซ้ำ = แทนที่) หลังจากนั้นเป็น instance ธรรมดา ลบ/แก้ได้"""
     return [add(f"{n}.vrp", _read(_path(SAMPLES_DIR, n))) for n in sample_names()]
 
 
 def remove(name: str) -> None:
+    """ลบไฟล์ instance พร้อมค่า optimal ที่กรอกไว้"""
     path = locate(name)
     with _lock:
         os.remove(path)

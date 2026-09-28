@@ -5,12 +5,13 @@ import Stat from "./Stat";
 import TimeLimitPicker from "./TimeLimitPicker";
 import { useFileDrop } from "./useFileDrop";
 import { useSolver } from "./useSolver";
-import { GAP_THRESHOLD } from "../../lib/api";
-import { fmt, vehicleNote } from "../../lib/format";
+import { ACCEPT } from "../../lib/api";
+import { fmt, gapNote, vehicleNote } from "../../lib/format";
 
+/** หน้า Solver: อัปโหลดไฟล์ → ตัวเลขสรุป → แผนที่ 2D → การ์ดรถรายคัน */
 export default function SolverSection() {
   const inputRef = useRef(null);
-  const { file, timeLimit, setTimeLimit, loading, error, result, solve } = useSolver();
+  const { file, timeLimit, setTimeLimit, loading, error, result, solve, solveSample } = useSolver();
   const { dragging, dropProps } = useFileDrop(solve, loading);
   const [active, setActive] = useState(null); // index ของเส้นทางที่ชี้อยู่ (ไฮไลต์)
 
@@ -18,22 +19,20 @@ export default function SolverSection() {
     setActive(null);
   }, [result]);
 
-  const gapOk = result?.gap != null && result.gap < GAP_THRESHOLD;
-
   return (
     <section className="bg-white px-[8vw] pb-24 pt-12 text-gray-900">
       <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
         <div>
           <p className="mb-3 text-xs tracking-[0.3em] text-gray-500">ROUTE SOLVER</p>
-          <h2 className="font-['Archivo'] text-3xl font-bold uppercase leading-tight [font-stretch:125%] md:text-4xl">
+          <h2 className="font-['Archivo'] text-2xl font-bold uppercase leading-tight [font-stretch:125%] sm:text-3xl md:text-4xl">
             Drop a .vrp file.
             <br />
             Get the route.
           </h2>
         </div>
         <p className="max-w-sm text-sm leading-relaxed text-gray-500">
-          อัปโหลดไฟล์ CVRP (รูปแบบ CVRPLIB) ระบบจะหาเส้นทางด้วย Google OR-Tools แล้วแสดงระยะทาง
-          ค่า gap เทียบ optimal และแผนที่เส้นทางของรถแต่ละคัน
+          อัปโหลดไฟล์ข้อมูลลูกค้า ระบบจะจัดเส้นทางให้รถทุกคันด้วย Google OR-Tools
+          พร้อมแสดงระยะทางรวม ผลเทียบค่า optimal และแผนที่เส้นทาง
         </p>
       </div>
 
@@ -45,20 +44,20 @@ export default function SolverSection() {
             onClick={() => inputRef.current?.click()}
             {...dropProps}
             disabled={loading}
-            className={`flex min-h-[12rem] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-8 text-center transition-colors ${
+            className={`flex min-h-[8rem] flex-col lg:min-h-[12rem] items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-8 text-center transition-colors ${
               dragging ? "border-gray-900 bg-gray-50" : "border-gray-300 hover:border-gray-500"
             } ${loading ? "cursor-wait opacity-60" : ""}`}
           >
             <svg viewBox="0 0 24 24" className="h-7 w-7 text-gray-500" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
               <path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span className="text-sm font-medium">{dragging ? "ปล่อยไฟล์ตรงนี้" : "ลากไฟล์ .vrp มาวาง หรือคลิกเพื่อเลือก"}</span>
-            {file && <span className="text-xs text-gray-500">{file.name}</span>}
+            <span className="text-sm font-medium">{dragging ? "ปล่อยไฟล์ตรงนี้" : "เลือกไฟล์หรือลากมาวางตรงนี้"}</span>
+            {file && <span className="text-xs font-medium text-gray-900">{file.name}</span>}
           </button>
           <input
             ref={inputRef}
             type="file"
-            accept=".vrp"
+            accept={ACCEPT}
             className="hidden"
             onChange={(e) => {
               solve(e.target.files?.[0]);
@@ -89,14 +88,14 @@ export default function SolverSection() {
 
         {/* ── ตัวเลขสรุป ── */}
         {result ? (
-          <div className={`grid min-w-0 auto-rows-fr grid-cols-2 gap-3 sm:grid-cols-3 ${loading ? "opacity-50" : ""}`}>
+          <div className={`grid min-w-0 auto-rows-fr grid-cols-2 gap-3 self-start sm:grid-cols-3 ${loading ? "opacity-50" : ""}`}>
             <Stat label="Instance" value={result.name} note={`${result.nodes.length - 1} ลูกค้า`} />
             <Stat label="ระยะทางรวม" value={fmt(result.distance)} />
             <Stat label="Optimal" value={result.optimal ?? "—"} />
             <Stat
               label="Gap"
               value={result.gap == null ? "—" : `${fmt(result.gap)} %`}
-              note={result.gap == null ? "ไม่มีค่า optimal" : gapOk ? `ต่ำกว่า ${GAP_THRESHOLD} %` : `△ สูงกว่า ${GAP_THRESHOLD} %`}
+              note={gapNote(result)}
             />
             <Stat label="จำนวนรถ" value={result.routes.length} note={vehicleNote(result)} />
             <Stat
@@ -106,8 +105,17 @@ export default function SolverSection() {
             />
           </div>
         ) : (
-          <div className="flex min-h-[16rem] items-center justify-center rounded-2xl border border-gray-200 bg-gray-50 px-6 text-center text-sm text-gray-500">
+          <div className="flex min-h-[10rem] flex-col lg:min-h-[16rem] items-center justify-center gap-4 rounded-2xl border border-gray-200 bg-gray-50 px-6 text-center text-sm text-gray-500">
             {loading ? "กำลังคำนวณเส้นทาง…" : "ผลลัพธ์และแผนที่เส้นทางจะแสดงตรงนี้"}
+            {!loading && (
+              <button
+                type="button"
+                onClick={solveSample}
+                className="rounded-full border border-gray-900 bg-white px-5 py-2.5 text-sm font-medium text-gray-900 hover:bg-gray-100"
+              >
+                ลองด้วยข้อมูลตัวอย่าง
+              </button>
+            )}
           </div>
         )}
       </div>

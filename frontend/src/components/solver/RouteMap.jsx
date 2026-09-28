@@ -1,13 +1,42 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { routeColor } from "./colors";
 
-const W = 960;
-const PAD = 28;
+const W = 960; // ความกว้าง viewBox ของ SVG (ความสูงคำนวณตามสัดส่วนข้อมูล)
+const PAD = 28; // ขอบว่างรอบจุด
+const BG = "#fcfcfb"; // พื้นหลังการ์ด (ใช้ตอนบันทึก PNG ด้วย)
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+/** บันทึกแผนที่ (SVG บนหน้า) เป็นไฟล์ PNG ความละเอียด 2 เท่า พื้นหลังสีเดียวกับการ์ด */
+function downloadPng(svg, H, filename) {
+  const scale = 2;
+  const clone = svg.cloneNode(true);
+  // ต้องกำหนดขนาดจริง ไม่งั้นเบราว์เซอร์วาด SVG ที่มีแค่ viewBox เป็นขนาดเริ่มต้น 300×150
+  clone.setAttribute("width", W * scale);
+  clone.setAttribute("height", H * scale);
+  const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(clone)], { type: "image/svg+xml" }));
+  const img = new Image();
+  img.onload = () => {
+    const canvas = Object.assign(document.createElement("canvas"), { width: W * scale, height: H * scale });
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = BG;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+    canvas.toBlob((blob) => {
+      const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: filename });
+      document.body.append(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+    }, "image/png");
+  };
+  img.src = url;
+}
 
 /** แผนที่เส้นทางจากพิกัด x,y ของไฟล์ .vrp (ชี้เส้นทางเพื่อไฮไลต์ ชี้จุดเพื่อดูรายละเอียด) */
 export default function RouteMap({ result, active, onActive }) {
   const [tip, setTip] = useState(null);
+  const svgRef = useRef(null);
 
   const { pos, routeOf, H } = useMemo(() => {
     const xs = result.nodes.map((n) => n.x);
@@ -33,9 +62,19 @@ export default function RouteMap({ result, active, onActive }) {
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-[#fcfcfb]">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3">
         <span className="text-sm font-medium text-gray-900">แผนที่เส้นทาง</span>
+        <button
+          type="button"
+          onClick={() => downloadPng(svgRef.current, H, `${result.name}-routes.png`)}
+          className="flex items-center gap-1.5 rounded-full border border-gray-300 px-3 py-1 text-xs text-gray-700 hover:border-gray-500"
+        >
+          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
+            <path d="M12 4v12m0 0l-4-4m4 4l4-4M4 18v1a1 1 0 001 1h14a1 1 0 001-1v-1" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          ดาวน์โหลด PNG
+        </button>
       </div>
       <div className="relative">
-        <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label={`แผนที่เส้นทาง ${result.name}`}>
+        <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label={`แผนที่เส้นทาง ${result.name}`}>
           {result.routes.map((r, i) => {
             const pts = [result.depot, ...r.stops, result.depot].map((id) => pos[id].join(",")).join(" ");
             return (
@@ -76,6 +115,7 @@ export default function RouteMap({ result, active, onActive }) {
             x={depot[0] + 11}
             y={depot[1] + 4}
             fontSize="11"
+            fontFamily="Inter, system-ui, sans-serif"
             fill="#14171c"
             fontWeight="600"
             stroke="#fcfcfb"

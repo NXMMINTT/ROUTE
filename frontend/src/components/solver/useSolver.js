@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { requestJson } from "../../lib/api";
 import { loadLast, saveLast } from "../../lib/lastResult";
 
+export const SAMPLE = "A-n32-k5"; // ไฟล์ตัวอย่างใน backend/instances/ (31 ลูกค้า, 5 คัน)
+
 /** อัปโหลด .vrp ไปที่ POST /api/solve แล้วเก็บผล (ใช้ร่วมกันทั้งหน้า Solver และหน้า 3D) */
 export function useSolver() {
   const [file, setFile] = useState(null);
@@ -37,5 +39,16 @@ export function useSolver() {
     }
   }
 
-  return { file, timeLimit, setTimeLimit, loading, error, result, solve };
+  /** ผู้ใช้ที่ยังไม่มีไฟล์ .vrp: โหลดไฟล์ตัวอย่างจาก backend แล้วคำนวณเหมือนอัปโหลดเอง ("คำนวณใหม่" จึงใช้ได้ต่อ) */
+  async function solveSample() {
+    setError("");
+    try {
+      const { name, text } = await requestJson(`/api/samples/${SAMPLE}`);
+      await solve(new File([text], `${name}.vrp`));
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  return { file, timeLimit, setTimeLimit, loading, error, result, solve, solveSample };
 }

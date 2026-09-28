@@ -6,9 +6,8 @@ gsap.registerPlugin(ScrollTrigger);
 
 /**
  * ผูก GSAP ScrollTrigger กับ wrapper สูง 1200vh เพื่ออ่าน scroll progress (0..1)
- * ไม่ใช้ pin:true เพราะ .hd-stage เป็น position:sticky อยู่แล้ว (เหมือนเดโม)
- * scrub:true (ไม่ใส่ตัวเลข) = ไม่หน่วงเพิ่ม ให้ engine.step ของ timeline.js
- * เป็นคน smooth เอง เหมือนพฤติกรรม p+(tp-p)*.1 ของเดโม
+ * ไม่ใช้ pin:true เพราะ .hd-stage เป็น position:sticky อยู่แล้ว
+ * scrub:true (ไม่ใส่ตัวเลข) = ไม่หน่วงเพิ่ม การ smooth ทำที่ createFrameEngine ของ timeline.js ที่เดียว
  */
 export function useScrollProgress(triggerRef, progressRef) {
   useEffect(() => {

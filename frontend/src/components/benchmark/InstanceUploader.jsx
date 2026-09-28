@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
+import UploadReportModal from "./UploadReportModal";
 import { useFileDrop } from "../solver/useFileDrop";
-import { requestJson } from "../../lib/api";
+import { ACCEPT, requestJson } from "../../lib/api";
 
 /**
- * เพิ่ม instance เข้าคลัง: ลากไฟล์ .vrp มาวางหรือเลือกไฟล์ (หลายไฟล์ได้) แล้วแสดงผลรายไฟล์
+ * เพิ่ม instance เข้าคลัง: ลากไฟล์มาวางหรือเลือกไฟล์ (หลายไฟล์ได้) แล้วแสดงผลรายไฟล์ในป็อปอัพ
  * samples = จำนวนไฟล์ในชุดตัวอย่าง CVRPLIB ที่ backend มีให้ (มี = แสดงปุ่มเพิ่มชุดตัวอย่าง)
  */
 export default function InstanceUploader({ onUploaded, samples = 0, disabled = false }) {
@@ -34,7 +35,6 @@ export default function InstanceUploader({ onUploaded, samples = 0, disabled = f
 
   const locked = disabled || busy;
   const { dragging, dropProps } = useFileDrop(upload, locked, { multiple: true });
-  const replaced = report?.added.filter((a) => a.replaced).length ?? 0;
 
   return (
     <div className="flex flex-col gap-2">
@@ -48,12 +48,7 @@ export default function InstanceUploader({ onUploaded, samples = 0, disabled = f
           <svg viewBox="0 0 24 24" className="h-6 w-6 shrink-0 text-gray-500" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
             <path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          <div>
-            <div className="text-sm font-medium">{busy ? "กำลังอัปโหลด…" : dragging ? "ปล่อยไฟล์ตรงนี้" : "เพิ่ม instance ของคุณ — ลากไฟล์ .vrp มาวาง (หลายไฟล์ได้)"}</div>
-            <div className="text-xs text-gray-500">
-              รูปแบบ CVRPLIB (EUC_2D) · ชื่อ instance มาจาก NAME ในไฟล์ · ชื่อซ้ำกับที่เคยอัปโหลด = แทนที่ของเดิม
-            </div>
-          </div>
+          <div className="text-sm font-medium">{busy ? "กำลังอัปโหลด…" : dragging ? "ปล่อยไฟล์ตรงนี้" : "ลากไฟล์มาวางตรงนี้ (หลายไฟล์ได้)"}</div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {samples > 0 && (
@@ -79,7 +74,7 @@ export default function InstanceUploader({ onUploaded, samples = 0, disabled = f
         <input
           ref={inputRef}
           type="file"
-          accept=".vrp"
+          accept={ACCEPT}
           multiple
           className="hidden"
           onChange={(e) => {
@@ -89,24 +84,7 @@ export default function InstanceUploader({ onUploaded, samples = 0, disabled = f
         />
       </div>
 
-      {report?.added.length > 0 && (
-        <p role="status" className="rounded-xl border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-800">
-          เพิ่ม {report.added.length} instance{replaced > 0 && ` (แทนที่ของเดิม ${replaced})`}: {report.added.map((a) => a.name).join(", ")}
-        </p>
-      )}
-      {report?.errors.length > 0 && (
-        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
-          <div className="mb-1 font-medium">เพิ่มไม่ได้ {report.errors.length} ไฟล์</div>
-          <ul className="list-inside list-disc text-xs">
-            {report.errors.map((e, i) => (
-              <li key={i}>
-                {e.file && <span className="font-medium">{e.file}: </span>}
-                {e.error}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {report && <UploadReportModal report={report} onClose={() => setReport(null)} />}
     </div>
   );
 }

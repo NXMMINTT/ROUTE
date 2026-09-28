@@ -1,19 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import AppNav from "../components/AppNav";
+import Modal from "../components/Modal";
 import GapChart from "../components/benchmark/GapChart";
 import InstanceUploader from "../components/benchmark/InstanceUploader";
 import OptimalCell from "../components/benchmark/OptimalCell";
 import { downloadCsv } from "../components/benchmark/csv";
 import Stat from "../components/solver/Stat";
 import TimeLimitPicker from "../components/solver/TimeLimitPicker";
-import { GAP_THRESHOLD as THRESHOLD, requestJson } from "../lib/api";
+import { GAP_THRESHOLD, requestJson } from "../lib/api";
 import { extraVehicles, fmt } from "../lib/format";
 import { saveLast } from "../lib/lastResult";
 
-const KEY = "route-benchmark:last";
+const KEY = "route-benchmark:last"; // sessionStorage: ผลการรันต่อ instance { [name]: { status, result, timeLimit } }
 const API = "/api/benchmark/instances";
 const instanceUrl = (name) => `${API}/${encodeURIComponent(name)}`;
 
+// ── ผลการรันที่จำไว้ในแท็บนี้ ──
 function loadRows() {
   try {
     const saved = JSON.parse(sessionStorage.getItem(KEY)) ?? {};
@@ -38,16 +40,47 @@ function gapOf(instance, result) {
   return ((result.distance - instance.optimal) / instance.optimal) * 100;
 }
 
+// ป้ายสถานะ: จุดสี + ข้อความ บนพื้นสีอ่อนโทนเดียวกัน
+const BADGE = {
+  pass: "bg-green-50 text-green-700",
+  fail: "bg-amber-50 text-amber-800",
+  error: "bg-red-50 text-red-700",
+  neutral: "bg-gray-100 text-gray-600",
+};
+const DOT = { pass: "bg-green-500", fail: "bg-amber-500", error: "bg-red-500", neutral: "bg-gray-400" };
+
+function Badge({ tone, title, pulse = false, children }) {
+  return (
+    <span title={title} className={`inline-flex w-fit items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ${BADGE[tone]}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${DOT[tone]} ${pulse ? "motion-safe:animate-pulse" : ""}`} />
+      {children}
+    </span>
+  );
+}
+
+/**
+ * ช่องสถานะในตาราง = ผลของการรันครั้งล่าสุด
+ * ยังไม่รัน → — / กำลังรัน / ผิดพลาด / เกินความจุ / ผ่าน / ไม่ผ่าน (gap เกินเกณฑ์) / คำนวณแล้ว (ไม่มี optimal ให้เทียบ)
+ * ใช้รถเกินที่ไฟล์ระบุ = ข้อสังเกตบรรทัดล่าง (ไม่ได้แปลว่าไม่ผ่าน)
+ */
 function Status({ row, gap }) {
   if (!row) return <span className="text-gray-400">—</span>;
-  if (row.status === "running") return <span className="text-gray-500">กำลังรัน…</span>;
-  if (row.status === "error") return <span className="text-red-700" title={row.error}>✕ ผิดพลาด</span>;
+  if (row.status === "running") return <Badge tone="neutral" pulse>กำลังรัน</Badge>;
+  if (row.status === "error") return <Badge tone="error" title={row.error}>ผิดพลาด</Badge>;
   const r = row.result;
   return (
-    <span className="flex flex-col">
-      <GapStatus feasible={r.feasible} gap={gap} />
+    <span className="flex flex-col gap-1">
+      {!r.feasible ? (
+        <Badge tone="error">เกินความจุ</Badge>
+      ) : gap == null ? (
+        <Badge tone="neutral" title="ใส่ค่า optimal ในคอลัมน์ Optimal เพื่อวัด gap">คำนวณแล้ว</Badge>
+      ) : gap < GAP_THRESHOLD ? (
+        <Badge tone="pass">ผ่าน</Badge>
+      ) : (
+        <Badge tone="fail" title={`gap เกินเกณฑ์ ${GAP_THRESHOLD} %`}>ไม่ผ่าน</Badge>
+      )}
       {extraVehicles(r) > 0 && (
-        <span className="text-[11px] text-amber-700" title="จำนวนรถที่ไฟล์ระบุส่งของได้ไม่หมด จึงต้องใช้รถเพิ่ม">
+        <span className="text-[11px] text-gray-500" title="จำนวนรถที่ไฟล์ระบุส่งของได้ไม่หมด จึงต้องใช้รถเพิ่ม">
           ใช้รถ {r.routes.length} คัน (ไฟล์ระบุ {r.vehicles_stated})
         </span>
       )}
@@ -55,14 +88,9 @@ function Status({ row, gap }) {
   );
 }
 
-function GapStatus({ feasible, gap }) {
-  if (!feasible) return <span className="text-red-700">✕ เกินความจุ</span>;
-  if (gap == null) return <span className="text-gray-500">ไม่มี optimal</span>;
-  return gap < THRESHOLD ? <span className="text-green-700">✓ ผ่าน</span> : <span className="text-amber-700">△ เกิน {THRESHOLD} %</span>;
-}
-
 const linkBtn = "underline underline-offset-4 hover:text-gray-500 disabled:cursor-not-allowed disabled:text-gray-300 disabled:no-underline";
 
+/** หน้า Benchmark: คลัง instance + รันทีละตัว/ทั้งชุด + ตัวเลขสรุป กราฟ gap และตาราง */
 export default function Benchmark() {
   const [instances, setInstances] = useState([]);
   const [samples, setSamples] = useState(0); // จำนวนไฟล์ในชุดตัวอย่างที่ backend มีให้เพิ่ม
@@ -72,6 +100,7 @@ export default function Benchmark() {
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(null); // { done, total } ของรอบที่กำลังรัน
   const [error, setError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(null); // instance ที่รอยืนยันการลบ (เปิดป็อปอัพ)
   const runRef = useRef(null); // AbortController ของรอบที่กำลังรัน
 
   const reload = useCallback(async (signal) => {
@@ -92,6 +121,7 @@ export default function Benchmark() {
     };
   }, [reload]);
 
+  // ── state ของผลการรัน (เขียนลง sessionStorage ทุกครั้งที่เปลี่ยน) ──
   function updateRows(fn) {
     setRows((prev) => {
       const next = fn(prev);
@@ -143,6 +173,7 @@ export default function Benchmark() {
     setProgress(null);
   }
 
+  // ── การแก้คลัง: ลบ / กรอก optimal / อัปโหลด (ข้อผิดพลาดแสดงในกล่องแดงด้านบน) ──
   async function act(fn) {
     setError("");
     try {
@@ -154,7 +185,6 @@ export default function Benchmark() {
 
   const removeInstance = (it) =>
     act(async () => {
-      if (!window.confirm(`ลบ instance ${it.name}? (ลบไฟล์ออกจากคลังพร้อมผลการรันของไฟล์นี้)`)) return;
       await requestJson(instanceUrl(it.name), { method: "DELETE" });
       setRow(it.name, null);
       await reload();
@@ -180,6 +210,7 @@ export default function Benchmark() {
     act(() => reload());
   }
 
+  /** เปิดผลของ instance นี้ในหน้า Solver (#/solve) หรือ 3D (#/3d) ผ่าน "ผลล่าสุด" ใน sessionStorage */
   function openIn(it, result, hash) {
     const gap = gapOf(it, result);
     saveLast({ ...result, optimal: it.optimal ?? null, gap });
@@ -192,7 +223,7 @@ export default function Benchmark() {
     .map((it) => ({ instance: it, row: rows[it.name], gap: gapOf(it, rows[it.name].result) }));
   const withGap = records.filter((r) => r.gap != null);
   const gaps = withGap.map((r) => r.gap);
-  const passed = withGap.filter((r) => r.row.result.feasible && r.gap < THRESHOLD).length;
+  const passed = withGap.filter((r) => r.row.result.feasible && r.gap < GAP_THRESHOLD).length;
   const noOptimal = instances.filter((it) => !it.optimal).length;
   const limitsUsed = [...new Set(records.map((r) => r.row.timeLimit).filter(Boolean))].sort((a, b) => a - b);
 
@@ -202,7 +233,7 @@ export default function Benchmark() {
         <TimeLimitPicker value={timeLimit} onChange={setTimeLimit} disabled={running} />
         {running ? (
           <button type="button" onClick={stop} className="rounded-full border border-gray-900 px-4 py-2 text-sm font-medium hover:bg-gray-50">
-            หยุด ({progress ? `${progress.done}/${progress.total}` : "…"})
+            STOP ({progress ? `${progress.done}/${progress.total}` : "…"})
           </button>
         ) : (
           <button
@@ -211,7 +242,7 @@ export default function Benchmark() {
             disabled={!instances.length}
             className="rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:bg-gray-400"
           >
-            รันทั้งหมด ({instances.length})
+            RUN ALL ({instances.length})
           </button>
         )}
       </AppNav>
@@ -220,15 +251,14 @@ export default function Benchmark() {
         <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
           <div>
             <p className="mb-3 text-xs tracking-[0.3em] text-gray-500">BENCHMARK</p>
-            <h2 className="font-['Archivo'] text-3xl font-bold uppercase leading-tight [font-stretch:125%] md:text-4xl">
+            <h2 className="font-['Archivo'] text-2xl font-bold uppercase leading-tight [font-stretch:125%] sm:text-3xl md:text-4xl">
               Every instance.
               <br />
-              Under {THRESHOLD} % gap.
+              Under {GAP_THRESHOLD} % gap.
             </h2>
           </div>
           <p className="max-w-md text-sm leading-relaxed text-gray-500">
-            เพิ่มไฟล์ .vrp ของคุณเข้าคลัง แล้วรันทุกไฟล์ด้วยเวลาค้นหาเท่ากัน เทียบระยะทางกับค่า optimal
-            (ไฟล์ที่ไม่มีค่า optimal กรอก best known solution เองได้ในตาราง) เกณฑ์ผ่านคือ gap ต่ำกว่า {THRESHOLD} % และไม่เกินความจุรถ
+            เพิ่มไฟล์เข้าคลัง แล้วรันทุกไฟล์ด้วยเวลาค้นหาเท่ากัน เกณฑ์ผ่านคือ gap ต่ำกว่า {GAP_THRESHOLD} % และไม่เกินความจุรถ
           </p>
         </div>
 
@@ -240,7 +270,7 @@ export default function Benchmark() {
 
         <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Stat
-            label={`ผ่านเกณฑ์ gap < ${THRESHOLD} %`}
+            label={`ผ่านเกณฑ์ gap < ${GAP_THRESHOLD} %`}
             value={withGap.length ? `${passed} / ${withGap.length}` : "—"}
             note={`รันแล้ว ${records.length} / ${instances.length}${noOptimal ? ` · ไม่มี optimal ${noOptimal}` : ""}`}
           />
@@ -261,10 +291,9 @@ export default function Benchmark() {
 
         {loaded && !instances.length ? (
           <div className="flex min-h-[14rem] flex-col items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-gray-50 px-6 text-center">
-            <div className="text-sm font-medium">ยังไม่มี instance ในคลัง</div>
+            <div className="text-sm font-medium">ยังไม่มีไฟล์ในคลัง</div>
             <p className="max-w-md text-xs leading-relaxed text-gray-500">
-              ลากไฟล์ .vrp มาวางในช่องด้านบนเพื่อเริ่ม
-              {samples > 0 && " หรือกด “เพิ่มชุดตัวอย่าง CVRPLIB” เพื่อลองกับชุดทดสอบมาตรฐานที่รู้ค่า optimal อยู่แล้ว"}
+              เพิ่มไฟล์จากช่องด้านบน{samples > 0 && " หรือกด “เพิ่มชุดตัวอย่าง CVRPLIB”"}
             </p>
           </div>
         ) : (
@@ -273,7 +302,7 @@ export default function Benchmark() {
               <GapChart items={withGap.map((r) => ({ name: r.instance.name, gap: r.gap }))} />
             ) : (
               <div className="flex min-h-[6rem] items-center justify-center rounded-2xl border border-gray-200 bg-gray-50 px-6 text-center text-sm text-gray-500">
-                กด “รันทั้งหมด” ด้านบน หรือ “รัน” รายตัวในตาราง แล้วกราฟ gap จะแสดงตรงนี้
+                กด “RUN ALL” ด้านบน หรือ “รัน” รายตัวในตาราง แล้วกราฟ gap จะแสดงตรงนี้
               </div>
             )}
 
@@ -293,7 +322,7 @@ export default function Benchmark() {
                     <th className="px-4 py-2 text-right font-normal">
                       {records.length > 0 && (
                         <button type="button" onClick={() => downloadCsv(records)} className={linkBtn}>
-                          Export CSV
+                          ส่งออก CSV
                         </button>
                       )}
                     </th>
@@ -334,7 +363,7 @@ export default function Benchmark() {
                                 </button>
                               </>
                             )}
-                            <button type="button" disabled={running} onClick={() => removeInstance(it)} className={`${linkBtn} text-red-700`}>
+                            <button type="button" disabled={running} onClick={() => setConfirmDelete(it)} className={`${linkBtn} text-red-700`}>
                               ลบ
                             </button>
                           </span>
@@ -348,6 +377,19 @@ export default function Benchmark() {
           </div>
         )}
       </section>
+
+      {confirmDelete && (
+        <Modal
+          icon="danger"
+          title={`ลบ ${confirmDelete.name}?`}
+          subtitle="ไฟล์จะถูกลบออกจากคลังพร้อมผลการรันและค่า optimal ที่กรอกไว้ ย้อนกลับไม่ได้"
+          onClose={() => setConfirmDelete(null)}
+          actions={[
+            { label: "ยกเลิก", variant: "secondary" },
+            { label: "ลบ", variant: "danger", onClick: () => removeInstance(confirmDelete) },
+          ]}
+        />
+      )}
     </div>
   );
 }

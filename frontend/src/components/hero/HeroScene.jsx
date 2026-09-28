@@ -23,7 +23,7 @@ const headingAt = (curve, t) => {
 /**
  * เนื้อหาใน <Canvas>: กล้อง orthographic ผ่าน pivot (rig) + รถ + แสง
  * ทุกเฟรมอ่าน progressRef (0..1) แล้วอัปเดตทั้ง 3D object และ DOM overlay
- * ในลูปเดียว เพื่อให้ตรงกับ frame() ของเดโมและเลี่ยง re-render ของ React
+ * ในลูปเดียว (เขียน style ตรงผ่าน ref ไม่ผ่าน state จึงไม่มี re-render ของ React)
  */
 export default function HeroScene({ progressRef, overlayRefs, reduceMotion }) {
   const { size } = useThree();
@@ -142,7 +142,7 @@ export default function HeroScene({ progressRef, overlayRefs, reduceMotion }) {
     }
     const routeWord = overlayRefs.routeWord.current;
     if (routeWord) {
-      const vis = clamp01(1 - Math.abs(dTruck - stopDs[near]) / (length * 2)) * f.c;
+      const vis = clamp(1 - Math.abs(dTruck - stopDs[near]) / (length * 2), 0, 1) * f.c;
       routeWord.style.opacity = vis;
       routeWord.style.transform = `translateY(${(1 - vis) * 26}px)`;
     }
@@ -199,7 +199,7 @@ export default function HeroScene({ progressRef, overlayRefs, reduceMotion }) {
     if (band) band.style.opacity = f.side;
 
     const speedEl = overlayRefs.speed.current;
-    if (speedEl) speedEl.style.opacity = clamp01(1 - f.c * 1.5);
+    if (speedEl) speedEl.style.opacity = clamp(1 - f.c * 1.5, 0, 1);
     const kmh = overlayRefs.kmh.current;
     if (kmh) kmh.textContent = String(Math.round(f.spd)).padStart(2, "0");
   });
@@ -224,8 +224,4 @@ export default function HeroScene({ progressRef, overlayRefs, reduceMotion }) {
       <primitive object={road} />
     </>
   );
-}
-
-function clamp01(v) {
-  return Math.min(1, Math.max(0, v));
 }

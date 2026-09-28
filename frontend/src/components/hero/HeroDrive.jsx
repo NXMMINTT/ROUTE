@@ -10,9 +10,10 @@ import { ROUTE_STOPS, SECTIONS } from "./sections";
 import "../../styles/hero.css";
 
 const N = SECTIONS.length;
-// ข้อความเดโม ใช้ไปก่อนได้ (พอร์ตจาก GHOST_LINE ของ reference/truck-center-demo.html)
+// ข้อความจางที่วิ่งในแถบพื้นหลัง (ตกแต่ง) ใส่ 2 ชุดต่อกันเพื่อให้เลื่อนวนได้ไม่ขาด
 const GHOST_LINE = "ROUTE PLANNING · CAPACITY CONSTRAINTS · OR-TOOLS · FLEET OPTIMISATION · ";
 
+/** ผู้ใช้ตั้งค่า "ลดการเคลื่อนไหว" ในระบบ (อัปเดตตามถ้าเปลี่ยนระหว่างเปิดหน้า) */
 function useReducedMotion() {
   const [reduce, setReduce] = useState(false);
   useEffect(() => {
@@ -25,6 +26,7 @@ function useReducedMotion() {
   return reduce;
 }
 
+/** เบราว์เซอร์สร้าง WebGL context ได้หรือไม่ (ไม่ได้ = ข้ามฉาก 3D แสดงข้อความแทน) */
 function useWebGLSupport() {
   const [supported, setSupported] = useState(true);
   useEffect(() => {
@@ -51,6 +53,10 @@ function ArrowUpRightIcon() {
   );
 }
 
+/**
+ * หน้าแรก: section สูง 1200vh ที่มี .hd-stage (sticky) ค้างเต็มจอ
+ * สกรอลล์ → progressRef (0..1) → HeroScene อัปเดตฉาก 3D และ DOM overlay ด้านล่างผ่าน overlayRefs ทุกเฟรม
+ */
 export default function HeroDrive() {
   const reduceMotion = useReducedMotion();
   const webglOk = useWebGLSupport();
@@ -93,6 +99,7 @@ export default function HeroDrive() {
     dots: dotRefs.current,
   };
 
+  /** ปุ่มจุดด้านข้าง: เลื่อนไปกลางช่วงค้างอ่านของชุดเนื้อหาที่ i */
   function scrollToSection(i) {
     const el = driveRef.current;
     if (!el) return;
@@ -152,11 +159,11 @@ export default function HeroDrive() {
           </h1>
           <div className="hd-side">
             <p>
-              Optimization-powered routing that splits your stops across the fleet and sequences
-              every vehicle's path — respecting truck capacity, minimising total distance.
+              แบ่งจุดส่งให้รถแต่ละคันและจัดลำดับเส้นทางให้อัตโนมัติ
+              ทุกคันบรรทุกไม่เกินความจุ และระยะทางรวมสั้นที่สุด
             </p>
             <a className="hd-arrow-link" href="#/solve">
-              <span>Explore the Platform</span>
+              <span>เริ่มคำนวณเส้นทาง</span>
               <ArrowUpRightIcon />
             </a>
           </div>
@@ -184,7 +191,6 @@ export default function HeroDrive() {
               </h2>
               <div className="hd-copy">
                 <p>{sec.body}</p>
-                <a href={sec.href ?? "#next"}>{sec.cta}</a>
               </div>
             </div>
           ))}

@@ -264,18 +264,7 @@
   line-height: 1.65;
 }
 .hd-info .hd-copy p {
-  margin: 0 0 1.2rem;
-}
-.hd-info .hd-copy a {
-  display: inline-block;
-  color: #ffffff;
-  text-decoration: none;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 999px;
-  padding: 0.7rem 1.4rem;
-  font-weight: 500;
-  font-size: 0.85rem;
-  letter-spacing: 0.05em;
+  margin: 0;
 }
 
 .hd-dots {
@@ -305,7 +294,7 @@
   transform: scale(1.5);
 }
 
-/* ข้อความฉากมุมบน (พอร์ตจาก .word ของ reference/truck-curve-demo.html) */
+/* ข้อความฉากมุมบน (ช่วงถนนโค้ง) */
 .hd-route-word {
   position: absolute;
   left: 8vw;
@@ -342,12 +331,27 @@
   max-width: 20rem;
 }
 
+@media (max-width: 767px) {
+  /* มือถือ: เมนูลงไปเป็นแถวที่สองใต้โลโก้ (ซ่อนไว้จะไปหน้า 3D / Benchmark จากหน้าแรกไม่ได้) */
+  .hd-nav {
+    flex-wrap: wrap;
+    row-gap: 0.9rem;
+  }
+  .hd-nav-links {
+    display: flex;
+    order: 1;
+    width: 100%;
+    gap: 1.25rem;
+    font-size: 0.72rem;
+  }
+}
+
 @media (max-width: 700px) {
   .hd-hero {
     flex-direction: column;
     gap: 1rem;
     justify-content: flex-start;
-    padding-top: clamp(5rem, 16vh, 6.5rem);
+    padding-top: clamp(7rem, 18vh, 8rem);
   }
   .hd-speed {
     top: calc(var(--hd-ground) - 11rem);
@@ -366,6 +370,5 @@
   }
   .hd-info .hd-copy p {
     font-size: 0.85rem;
-    margin-bottom: 0.8rem;
   }
 }

@@ -1,13 +1,11 @@
 """
-===================================================
-  Generalized CVRP Solver v2 — OR-Tools Edition
-  AI Hackathon Route Optimization 2026
-  BU × SCG-CPAC
-===================================================
-  ใช้ Google OR-Tools เป็น Core Optimizer
-  รับเนื้อหาไฟล์ .vrp → คืน Routes, Distance, Gap
-  (สคริปต์รันจาก command line + วาดกราฟ อยู่ใน cli.py)
-===================================================
+CVRP Solver (Google OR-Tools) — AI Hackathon Route Optimization 2026, BU × SCG-CPAC
+
+เนื้อหาไฟล์ .vrp → parse_vrp() → solve_ortools() → routes, distance, gap
+  1. PARSER    อ่าน/ตรวจไฟล์ CVRPLIB
+  2. DISTANCE  ระยะทางรวมแบบ Euclidean ทศนิยมเต็ม
+  3. SOLVER    สร้างโมเดล OR-Tools + ค้นหาด้วย Guided Local Search
+(รันจาก command line + วาดกราฟ อยู่ใน backend/cli.py)
 """
 
 import math
@@ -20,7 +18,7 @@ from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 MAX_NODES = 2000
 # ระยะแบบ float ต้องคูณ SCALE ก่อนส่ง OR-Tools (รับเฉพาะ integer)
 FLOAT_SCALE = 1000
-# EUC_2D = ปัดระยะทีละเส้นแบบ TSPLIB (ค่า optimal ของ CVRPLIB ใช้เกณฑ์นี้), ไม่ระบุ/EXACT_2D = float
+# ทุกแบบคิดระยะเป็นทศนิยมเต็ม (ไม่ปัดทีละเส้นแบบ TSPLIB) ตามเกณฑ์วัดของการแข่งขัน
 SUPPORTED_EDGE_TYPES = {"EUC_2D", "EXACT_2D", ""}
 
 
@@ -80,6 +78,7 @@ def parse_vrp(text: str) -> dict:
 
 
 def validate(data: dict) -> None:
+    """ตรวจว่าข้อมูลที่ parse ได้แก้โจทย์ได้จริง ไม่ผ่าน = VrpFormatError"""
     if data['edge_type'] not in SUPPORTED_EDGE_TYPES:
         raise VrpFormatError(f"ยังไม่รองรับ EDGE_WEIGHT_TYPE = {data['edge_type']} (รองรับ EUC_2D)")
     if not data['coords'] or data['capacity'] <= 0 or data['depot'] not in data['coords']:
@@ -94,21 +93,11 @@ def validate(data: dict) -> None:
 # ════════════════════════════════════════════
 # 2. DISTANCE
 # ════════════════════════════════════════════
-def uses_rounded_distance(data: dict) -> bool:
-    return data['edge_type'] == 'EUC_2D'
-
-
-def edge_distance(p, q, rounded: bool) -> float:
-    """ระยะระหว่างสองจุดตามเกณฑ์ของไฟล์ (EUC_2D ปัดเป็นจำนวนเต็มทีละเส้น)"""
-    d = math.dist(p, q)
-    return round(d) if rounded else d
-
-
 def total_distance(routes, data: dict) -> float:
+    """ระยะรวมทุกเส้นทาง (depot → จุดส่ง → depot) คิดจากพิกัดจริง ไม่ใช่ matrix ที่ปัดเป็นจำนวนเต็ม"""
     coords, depot = data['coords'], data['depot']
-    rounded = uses_rounded_distance(data)
     return sum(
-        edge_distance(coords[a], coords[b], rounded)
+        math.dist(coords[a], coords[b])
         for route in routes
         for a, b in zip([depot, *route], [*route, depot])
     )
@@ -143,6 +132,7 @@ def vehicle_count(data: dict) -> int:
 
 
 def _build_model(matrix, demand_vec, depot_idx, capacity, base_vehicles, spare):
+    """สร้าง RoutingModel: ต้นทุน = ระยะทาง, ข้อจำกัด = ความจุรถ, รถสำรอง spare คันมีค่าปรับต่อคัน"""
     num_vehicles = base_vehicles + spare
     manager = pywrapcp.RoutingIndexManager(len(matrix), num_vehicles, depot_idx)
     routing = pywrapcp.RoutingModel(manager)
@@ -166,6 +156,7 @@ def _build_model(matrix, demand_vec, depot_idx, capacity, base_vehicles, spare):
 
 
 def _search_params(seconds: float, first_solution_only: bool = False):
+    """พารามิเตอร์ค้นหา: first_solution_only = หยุดที่คำตอบแรก (ใช้เช็คว่าจำนวนรถพอไหม)"""
     params = pywrapcp.DefaultRoutingSearchParameters()
     # Initial solution: PATH_CHEAPEST_ARC (greedy เร็ว) แล้วปรับต่อด้วย GLS
     params.first_solution_strategy = routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
@@ -185,23 +176,23 @@ def solve_ortools(data: dict, time_limit_sec: int = 30) -> dict:
     - จำนวนรถหลักหาคำตอบแรกไม่ได้ → เพิ่มรถสำรอง (มีค่าปรับ) แล้วค้นหาต่อด้วยเวลาที่เหลือ
     """
     coords, demands, capacity = data['coords'], data['demands'], data['capacity']
-    rounded = uses_rounded_distance(data)
-    scale = 1 if rounded else FLOAT_SCALE
 
     # OR-Tools ใช้ index 0..n-1 จึงเรียง node ID แล้วแปลงกลับตอนอ่านผล
     nodes = sorted(coords)
     matrix = [
-        [int(round(edge_distance(coords[a], coords[b], rounded) * scale)) for b in nodes]
+        [int(round(math.dist(coords[a], coords[b]) * FLOAT_SCALE)) for b in nodes]
         for a in nodes
     ]
     model_args = (matrix, [demands.get(n, 0) for n in nodes], nodes.index(data['depot']), capacity)
     base_vehicles = vehicle_count(data)
 
+    # ขั้น 1: ลองหาคำตอบแรกด้วยรถหลักอย่างเดียว หาไม่ได้ = จำนวนรถไม่พอ → เพิ่มรถสำรอง
     t0 = time.perf_counter()
     spare = 0
     _, probe = _build_model(*model_args, base_vehicles, 0)
     if probe.SolveWithParameters(_search_params(FEASIBILITY_CHECK_SEC, first_solution_only=True)) is None:
         spare = SPARE_VEHICLES
+    # ขั้น 2: ค้นหาจริงด้วย GLS ในเวลาที่เหลือ
     manager, routing = _build_model(*model_args, base_vehicles, spare)
     num_vehicles = base_vehicles + spare
     solution = routing.SolveWithParameters(_search_params(time_limit_sec - (time.perf_counter() - t0)))
@@ -211,6 +202,7 @@ def solve_ortools(data: dict, time_limit_sec: int = 30) -> dict:
         return {'routes': [], 'distance': None, 'gap': None, 'feasible': False, 'elapsed': elapsed,
                 'vehicle_limit': base_vehicles, 'vehicles_stated': stated_vehicles(data)}
 
+    # ขั้น 3: อ่านเส้นทางของรถแต่ละคัน (แปลง index ของ OR-Tools กลับเป็น node ID) ข้ามรถที่ไม่ได้ใช้
     routes = []
     for v in range(num_vehicles):
         route = []

@@ -19,7 +19,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    // ส่ง /api/* ต่อไปที่ FastAPI (backend/main.py รันบนพอร์ต 8010 เพราะ 8000 มีโปรเจกต์อื่นใช้อยู่)
+    // ส่ง /api/* ต่อไปที่ FastAPI (backend/app/main.py รันบนพอร์ต 8010 เพราะ 8000 มีโปรเจกต์อื่นใช้อยู่)
     proxy: {
       "/api": "http://127.0.0.1:8010",
     },

@@ -11,8 +11,8 @@ import TimeLimitPicker from "../components/solver/TimeLimitPicker";
 import { routeColor } from "../components/solver/colors";
 import { useFileDrop } from "../components/solver/useFileDrop";
 import { useSolver } from "../components/solver/useSolver";
-import { GAP_THRESHOLD } from "../lib/api";
-import { fmt, vehicleNote } from "../lib/format";
+import { ACCEPT, GAP_THRESHOLD } from "../lib/api";
+import { fmt, gapNote, vehicleNote } from "../lib/format";
 
 /**
  * ฉาก 3D: ยังไม่มีผลลัพธ์ = เกาะเปล่ารอข้อมูล (ไม่มีโมเดลให้โหลด จึงไม่มีหน้ารอโหลด)
@@ -35,8 +35,8 @@ function RouteCanvas({ result, active, onActive }) {
   );
 }
 
-/** การ์ดด้านล่างฉากตอนยังไม่มีผลลัพธ์: ชวนอัปโหลด / บอกว่ากำลังคำนวณ (ไม่บังกลางเกาะ และรอบการ์ดยังลากหมุนฉากได้) */
-function EmptyPrompt({ loading, timeLimit, onUpload }) {
+/** การ์ดด้านล่างฉากตอนยังไม่มีผลลัพธ์: บอกว่าต้องอัปโหลด / กำลังคำนวณ (ไม่บังกลางเกาะ และรอบการ์ดยังลากหมุนฉากได้) */
+function EmptyPrompt({ loading, timeLimit }) {
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-6">
       <div className="pointer-events-auto max-w-sm rounded-2xl border border-gray-200 bg-white/90 px-6 py-5 text-center shadow-sm backdrop-blur">
@@ -48,17 +48,7 @@ function EmptyPrompt({ loading, timeLimit, onUpload }) {
         ) : (
           <>
             <div className="text-sm font-medium">ยังไม่มีเส้นทางให้แสดง</div>
-            <div className="mt-1 text-xs leading-relaxed text-gray-500">
-              ลากไฟล์ .vrp มาวางบนเกาะ หรืออัปโหลดไฟล์ — ลูกค้าจะขึ้นเป็นตึก (สูงตาม demand) และรถจะวิ่งตามเส้นทาง
-            </div>
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-              <button type="button" onClick={onUpload} className="rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700">
-                อัปโหลด .vrp
-              </button>
-              <a href="#/benchmark" className="text-xs text-gray-600 underline underline-offset-4 hover:text-gray-900">
-                หรือเปิดผลจากหน้า Benchmark
-              </a>
-            </div>
+            <div className="mt-1 text-xs leading-relaxed text-gray-500">กดปุ่ม UPLOAD FILE ด้านบน หรือลากไฟล์มาวางบนเกาะ</div>
           </>
         )}
       </div>
@@ -73,7 +63,7 @@ function EmptyPanel({ loading }) {
     <>
       <div className="mb-3 flex items-baseline justify-between text-xs text-gray-500">
         <span className="font-medium">ผลการคำนวณ</span>
-        <span>{loading ? "กำลังคำนวณ…" : "รอไฟล์ .vrp"}</span>
+        <span>{loading ? "กำลังคำนวณ…" : "รอไฟล์"}</span>
       </div>
       <div className={`grid grid-cols-2 gap-3 ${pulse}`}>
         <Stat label="ระยะทางรวม" value="—" />
@@ -113,6 +103,7 @@ function EmptyPanel({ loading }) {
   );
 }
 
+/** หน้า 3D View: แถบนำทาง (อัปโหลด/รันใหม่) + ฉาก 3D (ซ้าย) + แผงผลลัพธ์ (ขวา) */
 export default function Route3D() {
   const inputRef = useRef(null);
   const { file, timeLimit, setTimeLimit, loading, error, result, solve } = useSolver();
@@ -126,8 +117,6 @@ export default function Route3D() {
     setActive(null);
   }, [result]);
 
-  const gapOk = result?.gap != null && result.gap < GAP_THRESHOLD;
-
   return (
     <div className="flex min-h-screen flex-col bg-white text-gray-900 lg:h-screen">
       <AppNav current="#/3d">
@@ -138,17 +127,17 @@ export default function Route3D() {
           disabled={loading}
           className="rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-wait disabled:bg-gray-400"
         >
-          {loading ? "กำลังคำนวณ…" : "อัปโหลด .vrp"}
+          {loading ? "SOLVING…" : "UPLOAD FILE"}
         </button>
         {file && !loading && (
           <button type="button" onClick={() => solve(file)} className="rounded-full border border-gray-300 px-4 py-2 text-sm hover:border-gray-500">
-            คำนวณใหม่
+            RE-RUN
           </button>
         )}
         <input
           ref={inputRef}
           type="file"
-          accept=".vrp"
+          accept={ACCEPT}
           className="hidden"
           onChange={(e) => {
             solve(e.target.files?.[0]);
@@ -158,13 +147,13 @@ export default function Route3D() {
       </AppNav>
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        {/* ── ฉาก 3D (ลากไฟล์มาวางตรงนี้ได้) ── */}
+        {/* ── ฉาก 3D (ลากไฟล์มาวางตรงนี้ได้) + legend มุมซ้ายล่าง ── */}
         <main
-          className="relative h-[65vh] min-h-0 bg-[radial-gradient(ellipse_at_50%_40%,#ffffff,#f1f3f5_75%)] lg:h-auto lg:flex-1"
+          className="relative h-[55vh] min-h-0 sm:h-[65vh] bg-[radial-gradient(ellipse_at_50%_40%,#ffffff,#f1f3f5_75%)] lg:h-auto lg:flex-1"
           {...dropProps}
         >
           <RouteCanvas key={result ? "result" : "empty"} result={result} active={active} onActive={setActive} />
-          {!result && <EmptyPrompt loading={loading} timeLimit={timeLimit} onUpload={() => inputRef.current?.click()} />}
+          {!result && <EmptyPrompt loading={loading} timeLimit={timeLimit} />}
 
           {dragging && (
             <div className="pointer-events-none absolute inset-4 flex items-center justify-center rounded-2xl border-2 border-dashed border-gray-900 bg-white/70 text-sm font-medium">
@@ -203,13 +192,6 @@ export default function Route3D() {
                 <span>ความสูงตึก = demand</span>
                 <span>ลากเพื่อหมุน · สกรอลล์เพื่อซูม</span>
               </div>
-              <div className="mt-2 text-[10px] text-gray-400">
-                โมเดลตึกและโรงงาน (Low Poly Office Building 1–3, Small Water Processing Facility) โดย{" "}
-                <a href="https://sketchfab.com/Kendy2008" target="_blank" rel="noreferrer" className="underline">
-                  Kendy2008
-                </a>{" "}
-                (CC BY 4.0)
-              </div>
             </div>
           )}
         </main>
@@ -231,7 +213,7 @@ export default function Route3D() {
                 <Stat
                   label="Gap"
                   value={result.gap == null ? "—" : `${fmt(result.gap)} %`}
-                  note={result.gap == null ? "ไม่มีค่า optimal" : gapOk ? `ต่ำกว่า ${GAP_THRESHOLD} %` : `△ สูงกว่า ${GAP_THRESHOLD} %`}
+                  note={gapNote(result)}
                 />
                 <Stat label="สถานะ" value={result.feasible ? "Feasible" : "✕ เกินความจุ"} />
                 <Stat label="Algorithm" value={`GLS ${fmt(result.elapsed, 0)} s`} />
@@ -243,6 +225,9 @@ export default function Route3D() {
                   <RouteCard key={i} route={r} index={i} capacity={result.capacity} active={active === i} onActive={setActive} />
                 ))}
               </div>
+
+              {/* มือถือ: กล่อง legend บนฉากถูกซ่อน ย้ายวิธีใช้มาไว้ท้ายแผงแทน */}
+              <p className="mt-6 text-xs leading-relaxed text-gray-500 sm:hidden">ความสูงตึก = demand · ลากนิ้วบนฉากเพื่อหมุน · ถ่างสองนิ้วเพื่อซูม</p>
             </>
           )}
         </aside>

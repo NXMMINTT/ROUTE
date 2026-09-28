@@ -1,30 +1,25 @@
-// เนื้อหาแต่ละชุดของแถบดำ เพิ่ม/ลดชุดได้ด้วยการแก้ array นี้อย่างเดียว (href ไม่ระบุ = เลื่อนลงไปส่วนท้ายหน้า #next)
+// เนื้อหาแต่ละชุดของแถบดำ เพิ่ม/ลดชุดได้ด้วยการแก้ array นี้อย่างเดียว
 // ไทม์ไลน์ (timeline.js) คำนวณช่วงเวลาของแต่ละชุดจาก SECTIONS.length อัตโนมัติ
 // ข้อความต้องอ้างเฉพาะสิ่งที่ระบบทำได้จริง (CVRP: ความจุรถ + ระยะทาง) — ยังไม่มี time windows / live tracking
 export const SECTIONS = [
   {
     head: ["EVERYTHING", "YOUR FLEET"],
     dim: "NEEDS.",
-    body: "Upload a CVRPLIB file and get a complete plan — which truck serves which customer, in what order, and how far every vehicle drives.",
-    cta: "SEE HOW IT WORKS",
+    body: "อัปโหลดไฟล์ CVRPLIB แล้วได้แผนครบในครั้งเดียว — รถคันไหนส่งลูกค้ารายใด ตามลำดับไหน และแต่ละคันวิ่งไกลเท่าไร ดูผลได้ทั้งแผนที่ 2D และฉาก 3D ที่รถวิ่งตามเส้นทางจริง พร้อมสัดส่วนการบรรทุกของรถทุกคัน",
   },
   {
     head: ["HUNDREDS", "OF STOPS"],
     dim: "ONE PATH.",
-    body: "Google OR-Tools with Guided Local Search sequences every drop while keeping each truck within its capacity.",
-    cta: "SEE THE SOLVER",
-    href: "#/solve",
+    body: "Google OR-Tools (Guided Local Search) จัดลำดับทุกจุดส่ง โดยรถทุกคันบรรทุกไม่เกินความจุ เลือกเวลาค้นหาได้ 5, 10 หรือ 30 วินาที ยิ่งให้เวลานานยิ่งมีโอกาสได้เส้นทางที่สั้นลง และถ้าจำนวนรถในไฟล์ไม่พอ ระบบจะเพิ่มรถให้เท่าที่จำเป็น",
   },
   {
     head: ["EVERY MILE", "ACCOUNTED"],
     dim: "FOR.",
-    body: "Every result is scored against the known optimum — distance, gap and feasibility, benchmarked on the standard CVRPLIB set.",
-    cta: "SEE THE BENCHMARK",
-    href: "#/benchmark",
+    body: "ทุกผลลัพธ์วัดเทียบค่า optimal — ระยะทาง gap และความจุ ทดสอบกับชุดมาตรฐาน CVRPLIB เพิ่มไฟล์ทดสอบของคุณเองได้ทีละหลายไฟล์ (ไฟล์ที่ไม่มีค่า optimal กรอก best known solution เองได้) รันทั้งชุดด้วยเวลาค้นหาเท่ากัน เทียบเกณฑ์ gap ต่ำกว่า 5% แล้วส่งออกผลเป็น CSV ได้ในหน้า Benchmark",
   },
 ];
 
-// ข้อความฉากมุมบน (ถนนโค้ง) พอร์ตจาก STOPS ของ reference/truck-curve-demo.html
+// ข้อความฉากมุมบน (ช่วงถนนโค้ง)
 // at = จุดบนเส้นทางที่ข้อความขึ้นเต็มที่ ใช้พิกัดเดียวกับ PTS ใน useRoad.js (หน่วยเท่าความยาวรถ)
 export const ROUTE_STOPS = [
   { at: [2, 0], title: "CAPACITY", sub: "รถทุกคันบรรทุกไม่เกินความจุ ตรวจทุกเส้นทางก่อนส่งผล" },

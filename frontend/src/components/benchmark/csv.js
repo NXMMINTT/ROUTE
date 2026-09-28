@@ -1,5 +1,6 @@
 const COLUMNS = ["instance", "customers", "capacity", "vehicles", "distance", "optimal", "gap_percent", "feasible", "time_limit_s", "elapsed_s"];
 
+// escape ค่าตามมาตรฐาน CSV: มี , " หรือขึ้นบรรทัด → ครอบด้วย " และเบิ้ล " ข้างใน
 const cell = (v) => {
   if (v == null) return "";
   const s = String(v);

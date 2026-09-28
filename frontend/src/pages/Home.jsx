@@ -9,7 +9,7 @@ export default function Home() {
         <div className="flex flex-wrap items-end justify-between gap-8">
           <div>
             <p className="mb-3 text-xs tracking-[0.3em] text-gray-500">ROUTE SOLVER</p>
-            <h2 className="font-['Archivo'] text-3xl font-bold uppercase leading-tight [font-stretch:125%] md:text-4xl">
+            <h2 className="font-['Archivo'] text-2xl font-bold uppercase leading-tight [font-stretch:125%] sm:text-3xl md:text-4xl">
               Drop a .vrp file.
               <br />
               Get the route.

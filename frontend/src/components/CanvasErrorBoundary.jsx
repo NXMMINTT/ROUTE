@@ -1,5 +1,6 @@
 import { Component } from "react";
 
+/** ครอบ <Canvas>: WebGL/โมเดลพัง → แสดง fallback แทนทั้งหน้าขาว */
 export default class CanvasErrorBoundary extends Component {
   state = { hasError: false };
 

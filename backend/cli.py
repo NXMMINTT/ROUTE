@@ -1,8 +1,8 @@
 """
 รัน solver กับไฟล์ .vrp จาก command line แล้วสรุปผลเป็นตาราง + บันทึกรูปเส้นทาง (matplotlib)
-แยกจาก solver.py เพื่อให้ API server ไม่ต้อง import matplotlib
+แยกจาก app/services/solver.py เพื่อให้ API server ไม่ต้อง import matplotlib
 
-    python cli.py                      # รันทุกไฟล์ใน instances/
+    python cli.py                      # รันทุกไฟล์ใน samples/
     python cli.py path/to/A.vrp ...    # รันเฉพาะไฟล์ที่ระบุ
 """
 
@@ -16,7 +16,7 @@ matplotlib.use('Agg')
 import matplotlib.patches as mpatches  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 
-from solver import parse_vrp, solve_ortools  # noqa: E402
+from app.services.solver import parse_vrp, solve_ortools  # noqa: E402
 
 # console ภาษาไทยของ Windows (cp874) พิมพ์ ━ ✅ ❌ ไม่ได้ จนสคริปต์พัง บังคับ stdout เป็น UTF-8
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
@@ -118,7 +118,7 @@ def print_summary(results: list):
 
 if __name__ == '__main__':
     here = os.path.dirname(os.path.abspath(__file__))
-    files = sys.argv[1:] or sorted(glob.glob(os.path.join(here, 'instances', '*.vrp')))
+    files = sys.argv[1:] or sorted(glob.glob(os.path.join(here, 'samples', '*.vrp')))
 
     output_folder = 'solver_results'
     os.makedirs(output_folder, exist_ok=True)
