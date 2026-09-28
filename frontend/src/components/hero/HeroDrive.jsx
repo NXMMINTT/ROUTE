@@ -4,6 +4,7 @@ import HeroScene from "./HeroScene";
 import CanvasErrorBoundary from "../CanvasErrorBoundary";
 import LoadingScreen from "../LoadingScreen";
 import { SceneReady, useSceneLoading } from "../useSceneLoading";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useScrollProgress } from "../../hooks/useScrollProgress";
 import { sectionHoldMid } from "./timeline";
 import { ROUTE_STOPS, SECTIONS } from "./sections";
@@ -12,19 +13,6 @@ import "../../styles/hero.css";
 const N = SECTIONS.length;
 // ข้อความจางที่วิ่งในแถบพื้นหลัง (ตกแต่ง) ใส่ 2 ชุดต่อกันเพื่อให้เลื่อนวนได้ไม่ขาด
 const GHOST_LINE = "ROUTE PLANNING · CAPACITY CONSTRAINTS · OR-TOOLS · FLEET OPTIMISATION · ";
-
-/** ผู้ใช้ตั้งค่า "ลดการเคลื่อนไหว" ในระบบ (อัปเดตตามถ้าเปลี่ยนระหว่างเปิดหน้า) */
-function useReducedMotion() {
-  const [reduce, setReduce] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduce(mq.matches);
-    const onChange = (e) => setReduce(e.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-  return reduce;
-}
 
 /** เบราว์เซอร์สร้าง WebGL context ได้หรือไม่ (ไม่ได้ = ข้ามฉาก 3D แสดงข้อความแทน) */
 function useWebGLSupport() {
@@ -58,7 +46,8 @@ function ArrowUpRightIcon() {
  * สกรอลล์ → progressRef (0..1) → HeroScene อัปเดตฉาก 3D และ DOM overlay ด้านล่างผ่าน overlayRefs ทุกเฟรม
  */
 export default function HeroDrive() {
-  const reduceMotion = useReducedMotion();
+  // ผู้ใช้ตั้งค่า "ลดการเคลื่อนไหว" ในระบบ (อัปเดตตามถ้าเปลี่ยนระหว่างเปิดหน้า)
+  const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const webglOk = useWebGLSupport();
   const loading = useSceneLoading();
   const progressRef = useRef(0);

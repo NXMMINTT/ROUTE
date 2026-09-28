@@ -1,13 +1,17 @@
 import { useMemo, useRef, useState } from "react";
 import { routeColor } from "./colors";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 
-const W = 960; // ความกว้าง viewBox ของ SVG (ความสูงคำนวณตามสัดส่วนข้อมูล)
+// ความกว้าง viewBox ของ SVG (ความสูงคำนวณตามสัดส่วนข้อมูล)
+// มือถือใช้ viewBox แคบลง: แผนที่สูงขึ้นเทียบกับความกว้าง และจุด/เส้น/ตัวอักษรใหญ่พอจะมองเห็นและแตะได้
+const W_WIDE = 960;
+const W_NARROW = 480;
 const PAD = 28; // ขอบว่างรอบจุด
 const BG = "#fcfcfb"; // พื้นหลังการ์ด (ใช้ตอนบันทึก PNG ด้วย)
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 /** บันทึกแผนที่ (SVG บนหน้า) เป็นไฟล์ PNG ความละเอียด 2 เท่า พื้นหลังสีเดียวกับการ์ด */
-function downloadPng(svg, H, filename) {
+function downloadPng(svg, W, H, filename) {
   const scale = 2;
   const clone = svg.cloneNode(true);
   // ต้องกำหนดขนาดจริง ไม่งั้นเบราว์เซอร์วาด SVG ที่มีแค่ viewBox เป็นขนาดเริ่มต้น 300×150
@@ -37,6 +41,7 @@ function downloadPng(svg, H, filename) {
 export default function RouteMap({ result, active, onActive }) {
   const [tip, setTip] = useState(null);
   const svgRef = useRef(null);
+  const W = useMediaQuery("(max-width: 639px)") ? W_NARROW : W_WIDE;
 
   const { pos, routeOf, H } = useMemo(() => {
     const xs = result.nodes.map((n) => n.x);
@@ -53,7 +58,7 @@ export default function RouteMap({ result, active, onActive }) {
     const routeOf = {};
     result.routes.forEach((r, i) => r.stops.forEach((id) => (routeOf[id] = i)));
     return { pos, routeOf, H };
-  }, [result]);
+  }, [result, W]);
 
   const dim = (i) => active !== null && active !== i;
   const depot = pos[result.depot];
@@ -64,7 +69,7 @@ export default function RouteMap({ result, active, onActive }) {
         <span className="text-sm font-medium text-gray-900">แผนที่เส้นทาง</span>
         <button
           type="button"
-          onClick={() => downloadPng(svgRef.current, H, `${result.name}-routes.png`)}
+          onClick={() => downloadPng(svgRef.current, W, H, `${result.name}-routes.png`)}
           className="flex items-center gap-1.5 rounded-full border border-gray-300 px-3 py-1 text-xs text-gray-700 hover:border-gray-500"
         >
           <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
@@ -130,7 +135,8 @@ export default function RouteMap({ result, active, onActive }) {
         {tip && (
           <div
             className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-gray-900 px-3 py-2 text-xs text-white shadow"
-            style={{ left: `${(tip.x / W) * 100}%`, top: `calc(${(tip.y / H) * 100}% - 10px)` }}
+            // ไม่ให้ป้ายล้นขอบซ้าย/ขวาของการ์ดตอนแตะจุดริมแผนที่ (จอแคบ)
+            style={{ left: `${clamp((tip.x / W) * 100, 15, 85)}%`, top: `calc(${(tip.y / H) * 100}% - 10px)` }}
           >
             <div className="font-semibold">จุด {tip.n.id}</div>
             <div className="text-gray-300">demand {tip.n.demand}</div>

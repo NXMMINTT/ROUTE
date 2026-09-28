@@ -63,7 +63,8 @@ export default function OptimalCell({ instance, onSave, disabled = false }) {
         onKeyDown={(e) => e.key === "Escape" && close()}
         placeholder="เช่น 784"
         aria-label={`ค่า optimal ของ ${instance.name}`}
-        className="w-24 rounded-md border border-gray-300 px-2 py-0.5 text-right text-sm tabular-nums focus:border-gray-900 focus:outline-none"
+        // มือถือใช้ตัวอักษร 16px: iOS Safari ซูมทั้งหน้าเมื่อแตะช่องกรอกที่ตัวอักษรเล็กกว่านี้
+        className="w-24 rounded-md border border-gray-300 px-2 py-0.5 text-right text-base tabular-nums focus:border-gray-900 focus:outline-none sm:text-sm"
       />
     </form>
   );

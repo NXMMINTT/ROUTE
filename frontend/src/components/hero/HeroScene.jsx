@@ -49,12 +49,14 @@ export default function HeroScene({ progressRef, overlayRefs, reduceMotion }) {
       const w = size.width || 1;
       const h = size.height || 1;
       const aspect = w / h;
-      const visW = length / (aspect < 1 ? 0.88 : 0.5);
+      // สัดส่วนความยาวรถต่อความกว้างจอ: จอแนวตั้งไม่ให้รถเต็มจอ จะบังตัวหนังสือจางด้านหลังจนอ่านไม่ออก
+      const visW = length / (aspect < 1 ? 0.7 : 0.5);
       const visH = visW / aspect;
       const ppu = w / visW;
       const mobile = window.matchMedia(MOBILE_QUERY).matches;
-      const G0 = mobile ? 0.68 : 0.81;
-      const G1 = mobile ? 0.34 : 0.44;
+      // มือถือ: เส้นพื้นต่ำลง แถบดำด้านล่างจึงสูงพอดีกับเนื้อหา ไม่เหลือพื้นที่ว่าง (ช่วงอ่านเนื้อหาพื้นอยู่ที่ G1 + 0.1 ดู timeline.js)
+      const G0 = mobile ? 0.76 : 0.81;
+      const G1 = mobile ? 0.5 : 0.44;
       const off0 = (mobile ? 0.03 : 0.07) * visW;
       // ท้ายเส้นทาง กล้องหยุดตามก่อนสุดเส้นระยะเท่านี้ ให้รถวิ่งพ้นจอก่อนถนนหมด
       const exitMargin = Math.hypot(visW, visH) / 2 + length;

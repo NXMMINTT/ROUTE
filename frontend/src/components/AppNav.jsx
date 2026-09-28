@@ -20,7 +20,7 @@ export default function AppNav({ current, children }) {
               key={t.href}
               href={t.href}
               aria-current={current === t.href ? "page" : undefined}
-              className={`flex-1 whitespace-nowrap rounded-full px-2 py-1.5 text-center text-xs font-medium transition-colors sm:flex-none sm:px-4 sm:text-sm ${
+              className={`flex-1 whitespace-nowrap rounded-full px-2 py-2 text-center sm:py-1.5 text-xs font-medium transition-colors sm:flex-none sm:px-4 sm:text-sm ${
                 current === t.href ? "bg-gray-900 text-white" : "text-gray-600 hover:text-gray-900"
               }`}
             >

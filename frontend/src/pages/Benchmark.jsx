@@ -90,6 +90,30 @@ function Status({ row, gap }) {
 
 const linkBtn = "underline underline-offset-4 hover:text-gray-500 disabled:cursor-not-allowed disabled:text-gray-300 disabled:no-underline";
 
+/** ปุ่มของแต่ละ instance (ใช้ทั้งแถวตารางและการ์ดบนมือถือ) */
+function RowActions({ result, running, onRun, onOpen, onDelete, className }) {
+  return (
+    <span className={`flex gap-3 ${className}`}>
+      <button type="button" disabled={running} onClick={onRun} className={linkBtn}>
+        รัน
+      </button>
+      {result && (
+        <>
+          <button type="button" onClick={() => onOpen("#/solve")} className={linkBtn}>
+            แผนที่
+          </button>
+          <button type="button" onClick={() => onOpen("#/3d")} className={linkBtn}>
+            3D
+          </button>
+        </>
+      )}
+      <button type="button" disabled={running} onClick={onDelete} className={`${linkBtn} text-red-700`}>
+        ลบ
+      </button>
+    </span>
+  );
+}
+
 /** หน้า Benchmark: คลัง instance + รันทีละตัว/ทั้งชุด + ตัวเลขสรุป กราฟ gap และตาราง */
 export default function Benchmark() {
   const [instances, setInstances] = useState([]);
@@ -217,6 +241,14 @@ export default function Benchmark() {
     window.location.hash = hash;
   }
 
+  const actionsOf = (it, result) => ({
+    result,
+    running,
+    onRun: () => run([it.name]),
+    onOpen: (hash) => openIn(it, result, hash),
+    onDelete: () => setConfirmDelete(it),
+  });
+
   // ── ตัวเลขสรุป (นับเฉพาะ instance ที่ยังอยู่ในคลัง) ──
   const records = instances
     .filter((it) => rows[it.name]?.status === "done")
@@ -306,7 +338,7 @@ export default function Benchmark() {
               </div>
             )}
 
-            <div className="overflow-x-auto rounded-2xl border border-gray-200">
+            <div className="hidden overflow-x-auto rounded-2xl border border-gray-200 sm:block">
               <table className="w-full text-left text-sm">
                 <thead className="text-xs text-gray-500">
                   <tr className="border-b border-gray-200">
@@ -349,30 +381,62 @@ export default function Benchmark() {
                           <Status row={row} gap={gap} />
                         </td>
                         <td className="whitespace-nowrap px-4 py-2.5 text-right">
-                          <span className="flex justify-end gap-3 text-xs">
-                            <button type="button" disabled={running} onClick={() => run([it.name])} className={linkBtn}>
-                              รัน
-                            </button>
-                            {r && (
-                              <>
-                                <button type="button" onClick={() => openIn(it, r, "#/solve")} className={linkBtn}>
-                                  แผนที่
-                                </button>
-                                <button type="button" onClick={() => openIn(it, r, "#/3d")} className={linkBtn}>
-                                  3D
-                                </button>
-                              </>
-                            )}
-                            <button type="button" disabled={running} onClick={() => setConfirmDelete(it)} className={`${linkBtn} text-red-700`}>
-                              ลบ
-                            </button>
-                          </span>
+                          <RowActions {...actionsOf(it, r)} className="justify-end text-xs" />
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
+            </div>
+
+            {/* มือถือ: ตาราง 8 คอลัมน์ต้องเลื่อนซ้ายขวา จึงแสดงเป็นการ์ดทีละ instance แทน */}
+            <div className="flex flex-col gap-3 sm:hidden">
+              <div className="flex items-baseline justify-between text-xs text-gray-500">
+                <span>Instance ({instances.length})</span>
+                {records.length > 0 && (
+                  <button type="button" onClick={() => downloadCsv(records)} className={linkBtn}>
+                    ส่งออก CSV
+                  </button>
+                )}
+              </div>
+              {instances.map((it) => {
+                const row = rows[it.name];
+                const r = row?.status === "done" ? row.result : null;
+                const gap = gapOf(it, r);
+                return (
+                  <div key={it.name} className="rounded-2xl border border-gray-200 px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">{it.name}</div>
+                        <div className="text-xs text-gray-500">{it.customers} ลูกค้า</div>
+                      </div>
+                      <Status row={row} gap={gap} />
+                    </div>
+                    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm tabular-nums">
+                      <div>
+                        <dt className="text-xs text-gray-500">ระยะทาง</dt>
+                        <dd>{r ? fmt(r.distance) : "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-gray-500">Optimal</dt>
+                        <dd>
+                          <OptimalCell instance={it} onSave={(v) => saveOptimal(it, v)} disabled={running} />
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-gray-500">Gap</dt>
+                        <dd>{gap != null ? `${fmt(gap)} %` : "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-gray-500">เวลา / จำกัด</dt>
+                        <dd>{r ? `${fmt(r.elapsed, 1)} / ${row.timeLimit ?? "?"} s` : "—"}</dd>
+                      </div>
+                    </dl>
+                    <RowActions {...actionsOf(it, r)} className="mt-3 gap-5 border-t border-gray-100 pt-3 text-sm" />
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
