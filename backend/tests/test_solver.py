@@ -50,6 +50,8 @@ def test_parse_header_and_sections():
     SMALL.replace("CAPACITY : 10", "CAPACITY : 0"),    # ไม่มีความจุ
     SMALL.replace("2 3 4", "2 inf 4"),                 # พิกัดไม่ใช่ตัวเลขจำกัด
     SMALL.replace("2 6", "2 60"),                      # demand เกินความจุ
+    SMALL.replace("2 6", "2 -6"),                      # demand ติดลบ
+    SMALL.replace("3 6", "3 6\n9 5"),                  # demand ของจุดที่ไม่มีพิกัด
 ])
 def test_parse_rejects_bad_files(text):
     with pytest.raises(VrpFormatError):

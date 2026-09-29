@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { requestJson } from "../../lib/api";
 import { loadLast, saveLast } from "../../lib/lastResult";
 
-export const SAMPLE = "A-n32-k5"; // ไฟล์ตัวอย่างใน backend/instances/ (31 ลูกค้า, 5 คัน)
+const SAMPLE = "A-n32-k5"; // ไฟล์ตัวอย่างใน backend/samples/ (31 ลูกค้า, 5 คัน)
 
 /** อัปโหลด .vrp ไปที่ POST /api/solve แล้วเก็บผล (ใช้ร่วมกันทั้งหน้า Solver และหน้า 3D) */
 export function useSolver() {

@@ -1,4 +1,4 @@
-export const BACKEND_DOWN = "เชื่อมต่อ backend ไม่ได้ — เปิด backend ก่อน: cd backend แล้วรัน python -m app.main";
+const BACKEND_DOWN = "เชื่อมต่อ backend ไม่ได้ — เปิด backend ก่อน: cd backend แล้วรัน python -m app.main";
 export const GAP_THRESHOLD = 5; // เกณฑ์ gap ของการแข่งขัน (%)
 export const TIME_LIMITS = [5, 10, 30];
 // นามสกุลที่อัปโหลดได้: CVRPLIB (.vrp/.txt) หรือตารางลูกค้า (.csv/.xlsx — backend/table_import.py แปลงให้)

@@ -4,18 +4,12 @@
   --hd-ink: #14171c;
   --hd-ink-dim: #5b6169;
   --hd-ghost: #9198a1;
-  --hd-asphalt: #1c1f22;
-  --hd-lane: #8a9199;
   --hd-accent: #4a5058;
-  --hd-g0: 81%;
-  --hd-g1: 44%;
   --hd-ground: 81%;
 }
 
 @media (max-width: 700px) {
   :root {
-    --hd-g0: 76%;
-    --hd-g1: 50%;
     --hd-ground: 76%;
   }
 }

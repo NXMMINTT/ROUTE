@@ -85,6 +85,12 @@ def validate(data: dict) -> None:
         raise VrpFormatError("ไฟล์ไม่มี NODE_COORD_SECTION / CAPACITY / DEPOT ที่ใช้ได้")
     if len(data['coords']) > MAX_NODES:
         raise VrpFormatError(f"จำนวนโหนดเกิน {MAX_NODES} จุด")
+    unknown = [nid for nid in data['demands'] if nid not in data['coords']]
+    if unknown:
+        raise VrpFormatError(f"DEMAND_SECTION มีจุด {unknown[0]} ที่ไม่มีพิกัดใน NODE_COORD_SECTION")
+    negative = [nid for nid, d in data['demands'].items() if d < 0]
+    if negative:
+        raise VrpFormatError(f"demand ของจุด {negative[0]} ติดลบ")
     over = [nid for nid, d in data['demands'].items() if d > data['capacity']]
     if over:
         raise VrpFormatError(f"demand ของจุด {over[0]} เกินความจุรถ ({data['capacity']}) ไม่มีทางส่งได้")

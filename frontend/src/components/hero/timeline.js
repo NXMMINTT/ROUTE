@@ -5,8 +5,8 @@
 //   rise..tilt     ชุดเนื้อหา SECTIONS ไหลเข้า/ออกทีละชุด
 //   tilt..tiltEnd  กล้องเอียงลงเป็นมุมมองจากด้านบน
 //   tiltEnd..1     รถวิ่งตามถนนโค้ง (useRoad.js)
-export const T = { follow: 0.0976, rise: 0.1756, tilt: 0.7025, tiltEnd: 0.8196 };
-export const TRANS = 0.45; // 45% แรกของแต่ละช่วงชุดคือรถวิ่ง อีก 55% คือจอดให้อ่าน
+const T = { follow: 0.0976, rise: 0.1756, tilt: 0.7025, tiltEnd: 0.8196 };
+const TRANS = 0.45; // 45% แรกของแต่ละช่วงชุดคือรถวิ่ง อีก 55% คือจอดให้อ่าน
 
 export const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 export const lerp = (a, b, t) => a + (b - a) * t;
@@ -16,7 +16,7 @@ export const easeIO = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2,
 
 // ช่วงเวลาของชุดเนื้อหาที่ i (0-based) จากทั้งหมด n ชุด คำนวณอัตโนมัติจาก n
 // เพิ่ม/ลดชุดใน SECTIONS แล้วช่วงเวลาปรับเองโดยไม่ต้อง hardcode ทีละชุด
-export const sectionSpan = (n) => (T.tilt - T.rise) / n;
+const sectionSpan = (n) => (T.tilt - T.rise) / n;
 export const sectionInStart = (i, n) => T.rise + i * sectionSpan(n) - (i === 0 ? 0.0195 : 0);
 export const sectionInEnd = (i, n) => T.rise + i * sectionSpan(n) + sectionSpan(n) * TRANS;
 export const sectionHoldMid = (i, n) => sectionInEnd(i, n) + (sectionSpan(n) * (1 - TRANS)) / 2;

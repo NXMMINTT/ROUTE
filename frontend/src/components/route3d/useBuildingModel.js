@@ -6,8 +6,8 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 // ด้านที่ยาวที่สุดของตึก (รวมแผ่นพื้น) หลังปรับสเกล หน่วยโลก ต้องเล็กกว่าระยะห่างระหว่างจุดลูกค้า
 export const BUILDING_FOOTPRINT = 0.9;
 // ตึกลูกค้าคละกันตามลำดับ id ส่วน depot ใช้โมเดลแยก (ต่ำ/กว้าง ยืดตามความสูงไม่ได้ จึงไม่เอาไปเป็นลูกค้า)
-export const CUSTOMER_MODELS = ["/models/office-1.glb", "/models/office-2.glb", "/models/office-3.glb"];
-export const DEPOT_MODEL = "/models/depot.glb";
+const CUSTOMER_MODELS = ["/models/office-1.glb", "/models/office-2.glb", "/models/office-3.glb"];
+const DEPOT_MODEL = "/models/depot.glb";
 const ALL_MODELS = [...CUSTOMER_MODELS, DEPOT_MODEL];
 
 const baked = new WeakMap();

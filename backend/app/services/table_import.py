@@ -16,7 +16,6 @@ import os
 
 from app.services.solver import VrpFormatError
 
-TABLE_EXTENSIONS = {".csv", ".xlsx"}
 REQUIRED = ("x", "y", "demand")
 
 
